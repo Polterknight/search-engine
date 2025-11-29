@@ -95,8 +95,8 @@ class SearchEngineGUI(QMainWindow):
         
     def init_ui(self):
         """Инициализация интерфейса"""
-        self.setWindowTitle("Простой поисковый движок с консолью логов")
-        self.setGeometry(100, 100, 1200, 800)
+        self.setWindowTitle("Простой поисковый движок")
+        self.setGeometry(100, 100, 900, 700)
         
         # Создаем центральный виджет
         central_widget = QWidget()
@@ -106,9 +106,9 @@ class SearchEngineGUI(QMainWindow):
         main_layout = QVBoxLayout(central_widget)
         
         # Заголовок
-        title_label = QLabel("ПРОСТОЙ ПОИСКОВЫЙ ДВИЖОК С КОНСОЛЬЮ ЛОГОВ")
+        title_label = QLabel("ПРОСТОЙ ПОИСКОВЫЙ ДВИЖОК")
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        title_label.setFont(QFont("Arial", 14, QFont.Weight.Bold))
+        title_label.setFont(QFont("Arial", 16, QFont.Weight.Bold))
         main_layout.addWidget(title_label)
         
         # Панель управления
@@ -126,14 +126,9 @@ class SearchEngineGUI(QMainWindow):
         self.index_btn.setMinimumHeight(35)
         self.index_btn.setEnabled(False)
         
-        self.clear_logs_btn = QPushButton("🧹 Очистить логи")
-        self.clear_logs_btn.clicked.connect(self.clear_logs)
-        self.clear_logs_btn.setMinimumHeight(35)
-        
         control_layout.addWidget(self.select_folder_btn)
         control_layout.addWidget(self.selected_folder_label)
         control_layout.addWidget(self.index_btn)
-        control_layout.addWidget(self.clear_logs_btn)
         control_layout.addStretch()
         
         main_layout.addLayout(control_layout)
@@ -142,20 +137,6 @@ class SearchEngineGUI(QMainWindow):
         self.progress_bar = QProgressBar()
         self.progress_bar.setVisible(False)
         main_layout.addWidget(self.progress_bar)
-        
-        # Основной разделитель (рабочая область + логи)
-        main_splitter = QSplitter(Qt.Orientation.Vertical)
-        
-        # Верхняя часть - рабочая область
-        work_widget = QWidget()
-        work_layout = QVBoxLayout(work_widget)
-        
-        # Разделитель для поиска и результатов
-        search_splitter = QSplitter(Qt.Orientation.Horizontal)
-        
-        # Левая панель - поиск и результаты
-        left_widget = QWidget()
-        left_layout = QVBoxLayout(left_widget)
         
         # Поисковая строка
         search_layout = QHBoxLayout()
@@ -169,31 +150,21 @@ class SearchEngineGUI(QMainWindow):
         self.search_btn = QPushButton("Найти")
         self.search_btn.clicked.connect(self.perform_search)
         self.search_btn.setEnabled(False)
+        self.search_btn.setMinimumHeight(35)
         search_layout.addWidget(self.search_btn)
         
-        left_layout.addLayout(search_layout)
+        main_layout.addLayout(search_layout)
         
-        # Результаты поиска
-        left_layout.addWidget(QLabel("📄 Результаты поиска:"))
+        # Основной разделитель (результаты + логи)
+        main_splitter = QSplitter(Qt.Orientation.Vertical)
+        
+        # Верхняя часть - результаты поиска
+        results_widget = QWidget()
+        results_layout = QVBoxLayout(results_widget)
+        
+        results_layout.addWidget(QLabel("📄 Результаты поиска (отсортированы по релевантности):"))
         self.results_list = QListWidget()
-        self.results_list.itemDoubleClicked.connect(self.show_document_content)
-        left_layout.addWidget(self.results_list)
-        
-        # Правая панель - содержимое документа
-        right_widget = QWidget()
-        right_layout = QVBoxLayout(right_widget)
-        
-        right_layout.addWidget(QLabel("📖 Содержимое документа:"))
-        self.document_content = QTextEdit()
-        self.document_content.setReadOnly(True)
-        right_layout.addWidget(self.document_content)
-        
-        # Добавляем панели в разделитель
-        search_splitter.addWidget(left_widget)
-        search_splitter.addWidget(right_widget)
-        search_splitter.setSizes([400, 600])
-        
-        work_layout.addWidget(search_splitter)
+        results_layout.addWidget(self.results_list)
         
         # Нижняя часть - консоль логов
         log_widget = QWidget()
@@ -217,10 +188,18 @@ class SearchEngineGUI(QMainWindow):
         
         log_layout.addWidget(self.log_console)
         
+        # Кнопка очистки логов
+        clear_layout = QHBoxLayout()
+        self.clear_logs_btn = QPushButton("🧹 Очистить логи")
+        self.clear_logs_btn.clicked.connect(self.clear_logs)
+        clear_layout.addWidget(self.clear_logs_btn)
+        clear_layout.addStretch()
+        log_layout.addLayout(clear_layout)
+        
         # Добавляем виджеты в основной разделитель
-        main_splitter.addWidget(work_widget)
+        main_splitter.addWidget(results_widget)
         main_splitter.addWidget(log_widget)
-        main_splitter.setSizes([600, 200])
+        main_splitter.setSizes([500, 200])
         
         main_layout.addWidget(main_splitter)
         
@@ -300,21 +279,36 @@ class SearchEngineGUI(QMainWindow):
             
         try:
             self.results_list.clear()
-            self.document_content.clear()
             
             logging.info(f"🔍 Выполнение поиска: '{query}'")
             results = self.engine.search(query)
             
             if not results:
-                item = QListWidgetItem("По запросу ничего не найдено")
+                item = QListWidgetItem("❌ По запросу ничего не найдено")
                 self.results_list.addItem(item)
                 logging.info("❌ По запросу ничего не найдено")
                 return
                 
-            for result in results:
-                item_text = f"{result.document.id} (релевантность: {result.score:.3f})"
+            for i, result in enumerate(results, 1):
+                # Форматируем вывод с цветами в зависимости от релевантности
+                score = result.score
+                if score > 0.8:
+                    score_text = f"🔥 {score:.3f}"
+                elif score > 0.5:
+                    score_text = f"⚡ {score:.3f}"
+                else:
+                    score_text = f"📊 {score:.3f}"
+                
+                item_text = f"{i}. {result.document.id} - релевантность: {score_text}"
                 item = QListWidgetItem(item_text)
-                item.setData(Qt.ItemDataRole.UserRole, result)
+                
+                # Устанавливаем цвет в зависимости от релевантности
+                if score > 0.8:
+                    item.setBackground(Qt.GlobalColor.green)
+                    item.setForeground(Qt.GlobalColor.white)
+                elif score > 0.5:
+                    item.setBackground(Qt.GlobalColor.yellow)
+                
                 self.results_list.addItem(item)
                 
             self.statusBar().showMessage(f"Найдено документов: {len(results)}")
@@ -325,20 +319,6 @@ class SearchEngineGUI(QMainWindow):
             logging.error(error_msg)
             QMessageBox.critical(self, "Ошибка", error_msg)
             
-    def show_document_content(self, item):
-        """Показ содержимого выбранного документа"""
-        result = item.data(Qt.ItemDataRole.UserRole)
-        if hasattr(result, 'document') and hasattr(result.document, 'text'):
-            content = f"Документ: {result.document.id}\n"
-            content += f"Релевантность: {result.score:.3f}\n"
-            content += f"Сниппет: {result.snippet}\n\n"
-            content += f"Полный текст:\n{result.document.text}"
-            
-            self.document_content.setText(content)
-            logging.info(f"📖 Открыт документ: {result.document.id}")
-        else:
-            self.document_content.setText("Не удалось загрузить содержимое документа")
-            
     def clear_logs(self):
         """Очистка консоли логов"""
         self.log_console.clear()
@@ -347,7 +327,7 @@ class SearchEngineGUI(QMainWindow):
 def main():
     """Запуск графического интерфейса"""
     app = QApplication(sys.argv)
-    app.setApplicationName("Поисковый движок с консолью")
+    app.setApplicationName("Поисковый движок")
     
     window = SearchEngineGUI()
     window.show()
