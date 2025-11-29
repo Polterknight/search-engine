@@ -15,7 +15,7 @@ from src.models.document import Document, SearchResult
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                            QHBoxLayout, QPushButton, QTextEdit, QLineEdit, 
                            QListWidget, QLabel, QFileDialog, QProgressBar,
-                           QMessageBox, QSplitter, QDockWidget, QTextBrowser)
+                           QMessageBox, QSplitter, QListWidgetItem)
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from PyQt6.QtGui import QFont, QTextCursor
 
@@ -311,7 +311,7 @@ class SearchEngineGUI(QMainWindow):
                 
             for result in results:
                 item_text = f"{result.document.id} (релевантность: {result.score:.3f})"
-                item = QListWidgetItem(item_text)
+                item = QListWidgetItem(item_text)  # Теперь этот импорт есть!
                 item.setData(Qt.ItemDataRole.UserRole, result)
                 self.results_list.addItem(item)
                 
