@@ -2,7 +2,6 @@ import sys
 import os
 import logging
 from pathlib import Path
-from datetime import datetime
 
 # Добавляем путь к корневой директории проекта
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -12,10 +11,12 @@ from src.core.index_manager import IndexManager
 from src.core.search_manager import SearchManager
 from src.models.document import Document, SearchResult
 
-from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
-                           QHBoxLayout, QPushButton, QTextEdit, QLineEdit, 
-                           QListWidget, QLabel, QFileDialog, QProgressBar,
-                           QMessageBox, QSplitter, QListWidgetItem)
+from PyQt6.QtWidgets import (
+    QApplication, QMainWindow, QWidget, QVBoxLayout, 
+    QHBoxLayout, QPushButton, QTextEdit, QLineEdit, 
+    QListWidget, QLabel, QFileDialog, QProgressBar,
+    QMessageBox, QSplitter, QListWidgetItem, QTextBrowser
+)
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from PyQt6.QtGui import QFont, QTextCursor
 
@@ -305,13 +306,14 @@ class SearchEngineGUI(QMainWindow):
             results = self.engine.search(query)
             
             if not results:
-                self.results_list.addItem("По запросу ничего не найдено")
+                item = QListWidgetItem("По запросу ничего не найдено")
+                self.results_list.addItem(item)
                 logging.info("❌ По запросу ничего не найдено")
                 return
                 
             for result in results:
                 item_text = f"{result.document.id} (релевантность: {result.score:.3f})"
-                item = QListWidgetItem(item_text)  # Теперь этот импорт есть!
+                item = QListWidgetItem(item_text)
                 item.setData(Qt.ItemDataRole.UserRole, result)
                 self.results_list.addItem(item)
                 
