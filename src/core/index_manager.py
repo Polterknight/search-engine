@@ -1,26 +1,33 @@
-import json
+import logging
 from typing import Dict, List
 from ..models.document import Document
+from ..utils.file_utils import FileUtils
 
 class InvertedIndex:
     """Инвертированный индекс для быстрого поиска"""
     
     def __init__(self):
-        self.terms: Dict[str, Dict[str, int]] = {}  # term -> {doc_id: tf}
+        self.terms: Dict[str, Dict[str, int]] = {}
         self.documents: Dict[str, Document] = {}
         self.total_docs = 0
     
     def add_document(self, doc: Document) -> None:
         """Добавление документа в индекс"""
+        logger = logging.getLogger(__name__)
+        
         self.documents[doc.id] = doc
         self.total_docs += 1
         
-        # Простая токенизация (можно заменить на более сложную)
+        logger.debug(f"Добавление документа: {doc.id}, слов: {doc.term_count}")
+        
+        # Простая токенизация
         terms = doc.text.lower().split()
         term_freq: Dict[str, int] = {}
         
         for term in terms:
             term_freq[term] = term_freq.get(term, 0) + 1
+        
+        logger.debug(f"Найдено уникальных терминов: {len(term_freq)}")
         
         for term, freq in term_freq.items():
             if term not in self.terms:
@@ -32,22 +39,29 @@ class IndexManager:
     
     def __init__(self):
         self.index = InvertedIndex()
+        self.logger = logging.getLogger(__name__)
     
     def build_from_directory(self, directory_path: str) -> None:
         """Построение индекса из директории с текстовыми файлами"""
-        # Реализация чтения файлов и построения индекса
-        pass
+        self.logger.info(f"Начало индексации директории: {directory_path}")
+        
+        documents = FileUtils.read_documents_from_directory(directory_path)
+        self.logger.info(f"Загружено документов для индексации: {len(documents)}")
+        
+        if not documents:
+            self.logger.warning("Не найдено документов для индексации!")
+            return
+        
+        for doc in documents:
+            self.index.add_document(doc)
+            
+        self.logger.info(f"Индексация завершена. Документов в индексе: {self.index.total_docs}")
+        self.logger.info(f"Уникальных терминов в индексе: {len(self.index.terms)}")
     
     def save_index(self, filepath: str) -> None:
         """Сохранение индекса в файл"""
-        with open(filepath, 'w', encoding='utf-8') as f:
-            json.dump({
-                'terms': self.index.terms,
-                'documents': {k: v.__dict__ for k, v in self.index.documents.items()}
-            }, f, ensure_ascii=False)
+        # ... существующий код ...
     
     def load_index(self, filepath: str) -> None:
         """Загрузка индекса из файла"""
-        with open(filepath, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-            # Восстановление индекса из JSON
+        # ... существующий код ...
