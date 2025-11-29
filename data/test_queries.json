@@ -1,0 +1,17 @@
+[
+    {
+      "query_id": 1,
+      "text": "погода в москве",
+      "relevant_documents": ["weather_moscow.txt", "forecast.txt"]
+    },
+    {
+      "query_id": 2, 
+      "text": "технологии искусственный интеллект",
+      "relevant_documents": ["ai_news.txt", "tech_review.txt"]
+    },
+    {
+      "query_id": 3,
+      "text": "новости науки",
+      "relevant_documents": ["science_news.txt", "research.txt"]
+    }
+  ]
