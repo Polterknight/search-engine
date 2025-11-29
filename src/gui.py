@@ -1,25 +1,25 @@
 import sys
 import os
+import logging
 from pathlib import Path
 
 # Добавляем путь к корневой директории проекта
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)
 
-# Теперь импортируем абсолютными путями
-from src.core.index_manager import IndexManager, InvertedIndex
+from src.core.index_manager import IndexManager
 from src.core.search_manager import SearchManager
-from src.core.ranker import TFIDFRanker
 from src.models.document import Document, SearchResult
-from src.utils.tokenizer import Tokenizer
-from src.utils.file_utils import FileUtils
 
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                            QHBoxLayout, QPushButton, QTextEdit, QLineEdit, 
                            QListWidget, QLabel, QFileDialog, QProgressBar,
-                           QMessageBox, QSplitter)
+                           QMessageBox, QSplitter, QListWidgetItem)
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from PyQt6.QtGui import QFont
+
+# Настройка логирования
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class SearchEngine:
     """Обертка для поискового движка"""
@@ -29,13 +29,18 @@ class SearchEngine:
         
     def index_documents(self, directory_path):
         """Индексация документов"""
+        logging.info(f"Начало индексации директории: {directory_path}")
         self.index_manager.build_from_directory(directory_path)
         self.search_manager = SearchManager(self.index_manager.index)
+        logging.info(f"Индексация завершена. Документов: {self.index_manager.index.total_docs}")
         
     def search(self, query, limit=10):
         """Поиск по запросу"""
+        logging.info(f"Выполнение поиска: '{query}'")
         if self.search_manager:
-            return self.search_manager.search(query, limit)
+            results = self.search_manager.search(query, limit)
+            logging.info(f"Найдено документов: {len(results)}")
+            return results
         return []
 
 class IndexingThread(QThread):
@@ -170,6 +175,7 @@ class SearchEngineGUI(QMainWindow):
             self.selected_folder_label.setStyleSheet("color: green; font-weight: bold;")
             self.index_btn.setEnabled(True)
             self.statusBar().showMessage(f"Выбрана папка: {folder}")
+            logging.info(f"Выбрана папка: {folder}")
             
     def start_indexing(self):
         """Запуск индексации"""
@@ -198,9 +204,11 @@ class SearchEngineGUI(QMainWindow):
             self.engine = self.indexing_thread.engine
             self.search_btn.setEnabled(True)
             self.statusBar().showMessage(message)
+            logging.info("Готово! Можно выполнять поиск")
             QMessageBox.information(self, "Успех", message)
         else:
             self.statusBar().showMessage("Ошибка индексации")
+            logging.error("Индексация завершилась с ошибкой")
             QMessageBox.critical(self, "Ошибка", message)
             
     def perform_search(self):
@@ -218,10 +226,13 @@ class SearchEngineGUI(QMainWindow):
             self.results_list.clear()
             self.document_content.clear()
             
+            logging.info(f"Выполнение поиска: '{query}'")
             results = self.engine.search(query)
             
             if not results:
-                self.results_list.addItem("По запросу ничего не найдено")
+                item = QListWidgetItem("По запросу ничего не найдено")
+                self.results_list.addItem(item)
+                logging.info("По запросу ничего не найдено")
                 return
                 
             for result in results:
@@ -231,9 +242,12 @@ class SearchEngineGUI(QMainWindow):
                 self.results_list.addItem(item)
                 
             self.statusBar().showMessage(f"Найдено документов: {len(results)}")
+            logging.info(f"Найдено документов: {len(results)}")
             
         except Exception as e:
-            QMessageBox.critical(self, "Ошибка", f"Ошибка поиска: {str(e)}")
+            error_msg = f"Ошибка поиска: {str(e)}"
+            logging.error(error_msg)
+            QMessageBox.critical(self, "Ошибка", error_msg)
             
     def show_document_content(self, item):
         """Показ содержимого выбранного документа"""
@@ -245,6 +259,7 @@ class SearchEngineGUI(QMainWindow):
             content += f"Полный текст:\n{result.document.text}"
             
             self.document_content.setText(content)
+            logging.info(f"Открыт документ: {result.document.id}")
         else:
             self.document_content.setText("Не удалось загрузить содержимое документа")
 
