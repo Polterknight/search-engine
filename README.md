@@ -54,6 +54,7 @@ pdoc3>=0.10.0
 pytest>=6.0.0
 pytest-cov>=2.0.0
 pytest-benchmark>=3.4.0
+PyQt6>=6.4.0
 
 
 ### 3. Инцтрукция по использованию
