@@ -2,35 +2,24 @@ import sys
 import os
 from pathlib import Path
 
-# Добавляем путь к модулям проекта
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+# Добавляем путь к корневой директории проекта
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, project_root)
+
+# Теперь импортируем абсолютными путями
+from src.core.index_manager import IndexManager, InvertedIndex
+from src.core.search_manager import SearchManager
+from src.core.ranker import TFIDFRanker
+from src.models.document import Document, SearchResult
+from src.utils.tokenizer import Tokenizer
+from src.utils.file_utils import FileUtils
 
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                            QHBoxLayout, QPushButton, QTextEdit, QLineEdit, 
                            QListWidget, QLabel, QFileDialog, QProgressBar,
-                           QMessageBox, QSplitter, QFrame, QListWidgetItem)
+                           QMessageBox, QSplitter)
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
-from PyQt6.QtGui import QFont, QIcon
-
-from core.index_manager import IndexManager
-from core.search_manager import SearchManager
-
-class IndexingThread(QThread):
-    """Поток для индексации документов"""
-    progress = pyqtSignal(int)
-    finished = pyqtSignal(bool, str)
-    
-    def __init__(self, directory_path):
-        super().__init__()
-        self.directory_path = directory_path
-        self.engine = SearchEngine()
-        
-    def run(self):
-        try:
-            self.engine.index_documents(self.directory_path)
-            self.finished.emit(True, f"Индексация завершена. Документов: {self.engine.index_manager.index.total_docs}")
-        except Exception as e:
-            self.finished.emit(False, f"Ошибка индексации: {str(e)}")
+from PyQt6.QtGui import QFont
 
 class SearchEngine:
     """Обертка для поискового движка"""
@@ -48,6 +37,23 @@ class SearchEngine:
         if self.search_manager:
             return self.search_manager.search(query, limit)
         return []
+
+class IndexingThread(QThread):
+    """Поток для индексации документов"""
+    progress = pyqtSignal(int)
+    finished = pyqtSignal(bool, str)
+    
+    def __init__(self, directory_path):
+        super().__init__()
+        self.directory_path = directory_path
+        self.engine = SearchEngine()
+        
+    def run(self):
+        try:
+            self.engine.index_documents(self.directory_path)
+            self.finished.emit(True, f"Индексация завершена. Документов: {self.engine.index_manager.index.total_docs}")
+        except Exception as e:
+            self.finished.emit(False, f"Ошибка индексации: {str(e)}")
 
 class SearchEngineGUI(QMainWindow):
     def __init__(self):
@@ -159,7 +165,8 @@ class SearchEngineGUI(QMainWindow):
         
         if folder:
             self.current_indexed_folder = folder
-            self.selected_folder_label.setText(f"Выбрано: {os.path.basename(folder)}")
+            folder_name = os.path.basename(folder)
+            self.selected_folder_label.setText(f"Выбрано: {folder_name}")
             self.selected_folder_label.setStyleSheet("color: green; font-weight: bold;")
             self.index_btn.setEnabled(True)
             self.statusBar().showMessage(f"Выбрана папка: {folder}")
@@ -231,13 +238,15 @@ class SearchEngineGUI(QMainWindow):
     def show_document_content(self, item):
         """Показ содержимого выбранного документа"""
         result = item.data(Qt.ItemDataRole.UserRole)
-        if result:
+        if hasattr(result, 'document') and hasattr(result.document, 'text'):
             content = f"Документ: {result.document.id}\n"
             content += f"Релевантность: {result.score:.3f}\n"
             content += f"Сниппет: {result.snippet}\n\n"
             content += f"Полный текст:\n{result.document.text}"
             
             self.document_content.setText(content)
+        else:
+            self.document_content.setText("Не удалось загрузить содержимое документа")
 
 def main():
     """Запуск графического интерфейса"""
